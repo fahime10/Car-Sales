@@ -6,6 +6,8 @@ install.packages("tidyverse")
 
 library(tidyverse)
 library(ggplot2)
+library(feasts)
+library(tsibble)
 
 data <- read.csv("./data/car_data.csv")
 
@@ -83,3 +85,68 @@ ggplot(data, aes(x = reorder(Body.Style, Body.Style, function(x)-length(x)))) +
     y = "Units sold"
   ) +
   theme_minimal()
+
+# Pie chart for cars sold by region
+regional_pct <- data %>%
+  count(Dealer_Region) %>%
+  mutate(
+    Percentage = n / sum(n),
+    label_pos = cumsum(Percentage) - (Percentage / 2),
+    Label = paste0(round(Percentage * 100, 1), "%")
+  )
+
+ggplot(regional_pct, aes(x = "", y = Percentage, fill = Dealer_Region)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar(theta = "y") +
+  geom_text(
+    aes(label = Label), 
+    position = position_stack(vjust = 0.5), 
+    color = "white", 
+    size = 3
+  ) +
+  labs(
+    title = "Cars sold by region",
+    x = "",
+    y = "",
+    fill = "Region"
+  ) +
+  theme_minimal() + 
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  )
+
+# Demand Decomposition
+monthly_ts <- monthly_sales %>%
+  mutate(Month_Year = yearmonth(Month_Year)) %>%
+  as_tsibble(index = Month_Year)
+
+monthly_ts %>%
+  model(classical_decomposition(Total_Units_Sold ~ season(12), type = "additive")) %>%
+  components() %>%
+  autoplot() +
+  labs(title = "Classical Decomposition of Car Demand")
+  theme_minimal()
+# The purpose of the time series decomposition is to take a messy, complicated
+# line of data and strip it down into its core individual components.
+# It is much like a prism splitting white lights into individual colours, in 
+# this case, Trend, Seasonality, and Random Noise.
+# To break it down:
+# 1) The raw historical data of total units sold is very bumpy and so it is hard
+# to use for long-term planning on its own because too many things are happening
+# at once;
+# 2) The trend (long-term growth) strips away the holidays and monthly bounces 
+# to show the direction of the business, in this case, from around 900 units in 
+# mid-2022 to 1,100 by mid-2023. This tells us that the business is indeed 
+# expanding, but they will need more logistics and larger fleet allocations in 
+# the coming year;
+# 3) The seasonal pattern shows spikes in October-December (above the baseline 
+# of 400 units), but then crashes every January/February. This means the 
+# business should anticipate by buying massive amounts of stock, but around 
+# December, they should slow down because there will not be as many customers;
+# 4) The random (trend minus seasonality) line represents the risk, in this case
+# it is flat, which means that the data is highly deterministic. This means that
+# sales are almost entirely driven by trend (predictable growth) and calendar 
+# cycles (seasonality). Future demand forecasting models should be very accurate
+# if this is the case
