@@ -185,6 +185,30 @@ View(sku_abc)
 # control because they contribute to at least 75% of the revenue;
 # Class B includes Passenger, and contributes 17% of the revenue, so inventory 
 # checks for this type of car is less frequent;
-# Class C includes Hardtop contributes to 13% of the revenue, so the business 
+# Class C includes Hardtop, and contributes to 13% of the revenue, so the business 
 # can count on these semi-annually, meaning it would be best not to over-order 
 # these
+
+# Geographic Demand Analysis
+regional_sales <- data %>%
+  mutate(Month_Year = floor_date(Date, "month")) %>%
+  group_by(Month_Year, Dealer_Region) %>%
+  summarise(Units_Sold = n(), .groups = 'drop')
+
+ggplot(regional_sales, aes(
+  x = Month_Year, 
+  y = Units_Sold, 
+  color = Dealer_Region
+  )
+  ) +
+  geom_line(size = 1) +
+  scale_x_date(date_breaks = "3 months", date_labels = "%b %y") +
+  labs(
+    title = "Regional Demand",
+    x = "Timeline",
+    y = "Units Sold",
+    color = "Region"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90))
+# All regions experience almost identical peaks and troughs. 
