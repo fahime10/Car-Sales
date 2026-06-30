@@ -30,6 +30,9 @@ data <- data %>%
 data <- data %>%
   mutate(Date = mdy(Date))
 
+data <- data %>%
+  rename(Price = Price....)
+
 # Exploratory Data Analysis
 # Date
 dim(data)
@@ -150,3 +153,38 @@ monthly_ts %>%
 # sales are almost entirely driven by trend (predictable growth) and calendar 
 # cycles (seasonality). Future demand forecasting models should be very accurate
 # if this is the case
+  
+# ABC Analysis
+sku_analysis <- data %>%
+  group_by(Body.Style) %>%
+  summarise(
+    Units_Sold = n(),
+    Total_Revenue = sum(Price, na.rm = TRUE)
+  ) %>%
+  mutate(Rev_Share = Total_Revenue / sum(Total_Revenue) * 100) %>%
+  arrange(desc(Rev_Share))
+
+View(sku_analysis)
+
+sku_abc <- sku_analysis %>%
+  arrange(desc(Total_Revenue)) %>%
+  mutate(
+    Cum_Revenue = cumsum(Total_Revenue),
+    Cum_Rev_Pct = Cum_Revenue / sum(Total_Revenue) * 100
+  ) %>%
+  mutate(
+    ABC_Class = case_when(
+      Cum_Rev_Pct <= 75 ~ "A",
+      Cum_Rev_Pct <= 95 ~ "B",
+      TRUE ~"C"
+    )
+  )
+
+View(sku_abc)
+# Class A includes SUV, Hatchback, and Sedan, and these need to be under great 
+# control because they contribute to at least 75% of the revenue;
+# Class B includes Passenger, and contributes 17% of the revenue, so inventory 
+# checks for this type of car is less frequent;
+# Class C includes Hardtop contributes to 13% of the revenue, so the business 
+# can count on these semi-annually, meaning it would be best not to over-order 
+# these
