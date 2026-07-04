@@ -3,9 +3,11 @@
 # Optimal Stocking Strategies
 
 install.packages("tidyverse")
+install.packages("fable")
 
 library(tidyverse)
 library(ggplot2)
+library(fable)
 library(feasts)
 library(tsibble)
 
@@ -212,3 +214,28 @@ ggplot(regional_sales, aes(
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90))
 # All regions experience almost identical peaks and troughs. 
+
+# Predictive modeling
+fit <- monthly_ts %>%
+  model(
+    Exponential_Smoothing = ETS(Total_Units_Sold),
+    Arima_Model = ARIMA(Total_Units_Sold)
+  )
+
+forecast_6m <- fit %>%
+  forecast(h = "6 months")
+
+forecast_6m %>%
+  autoplot(monthly_ts, level = 95) +
+  labs(
+    title = "6-Month Car Demand Forecast (2024)",
+    subtitle = "Comparing ETS and ARIMA performance on seasonal demand",
+    x = "Timeline",
+    y = "Units Forecasted"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90))
+# The ARIMA model struggled with the shorter time horizon, and so the ETS model 
+# performed better. The ETS model suggests that total monthly demand will rise 
+# above 2,000 units by mid-2024, which means that the supply chain must increase
+# inventory to keep up with this demand.
